@@ -38,27 +38,28 @@ data "aws_ami" "ubuntu" {
   }
 }
 
-resource "aws_iam_role" "ssm" {
-  name = "log8415-ssm-role"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Action    = "sts:AssumeRole"
-      Effect    = "Allow"
-      Principal = { Service = "ec2.amazonaws.com" }
-    }]
-  })
-}
+// IAM Role and Instance Profile for SSM for AWS accounts with IAM creation permissions
+# resource "aws_iam_role" "ssm" {
+#   name = "log8415-ssm-role"
+#   assume_role_policy = jsonencode({
+#     Version = "2012-10-17"
+#     Statement = [{
+#       Action    = "sts:AssumeRole"
+#       Effect    = "Allow"
+#       Principal = { Service = "ec2.amazonaws.com" }
+#     }]
+#   })
+# }
 
-resource "aws_iam_role_policy_attachment" "ssm_attach" {
-  role       = aws_iam_role.ssm.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-}
+# resource "aws_iam_role_policy_attachment" "ssm_attach" {
+#   role       = aws_iam_role.ssm.name
+#   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+# }
 
-resource "aws_iam_instance_profile" "ssm" {
-  name = "log8415-ssm-profile"
-  role = aws_iam_role.ssm.name
-}
+# resource "aws_iam_instance_profile" "ssm" {
+#   name = "log8415-ssm-profile"
+#   role = aws_iam_role.ssm.name
+# }
 
 module "gatekeeper" {
   source  = "terraform-aws-modules/ec2-instance/aws"
@@ -70,5 +71,14 @@ module "gatekeeper" {
   subnet_id                   = module.vpc.public_subnets[0]
   associate_public_ip_address = true
   vpc_security_group_ids      = [module.sg_gatekeeper.security_group_id]
-  iam_instance_profile        = aws_iam_instance_profile.ssm.name
+  
+  // Custom IAM Instance Profile with SSM permissions
+  # iam_instance_profile        = aws_iam_instance_profile.ssm.name
+
+  // Pre-existing IAM Instance Profile with SSM permissions with AWS Academy
+  iam_instance_profile        = "LabInstanceProfile" 
+
+  user_data = templatefile("${path.module}/scripts/setup_gatekeeper.sh", {
+    proxy_private_ip = "0.0.0.0" // module.proxy.private_ip
+  })
 }
