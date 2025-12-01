@@ -37,20 +37,23 @@ def is_safe(content: str) -> bool:
 def health():
     return {"status": "ok"}
 
-@app.post("/execute")
-async def execute_endpoint(request: Request):
+@app.post("/query")
+async def query_endpoint(request: Request):
     body_bytes = await request.body()
-    body_str = body_bytes.decode() if body_bytes else ""
+    strategy = request.headers.get("x-strategy", "direct").lower()
 
-    if not body_str:
+    if not body_bytes:
         return Response("empty body", status_code=400)
+
+    body_str = body_bytes.decode()
     if not is_safe(body_str):
         return Response("unsafe", status_code=400)
 
     try:
         response = requests.post(
-            PROXY_URL,
+            f"{PROXY_URL}/query",
             data=body_bytes,
+            headers={"X-Strategy": strategy},
             timeout=5
         )
     except requests.RequestException as e:

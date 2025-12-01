@@ -28,6 +28,54 @@ module "sg_gatekeeper" {
   egress_rules = ["all-all"]
 }
 
+module "sg_proxy" {
+  source = "terraform-aws-modules/security-group/aws"
+  name   = "proxy-sg"
+  vpc_id = module.vpc.vpc_id
+
+  ingress_with_source_security_group_id = [{
+    from_port                = 5000
+    to_port                  = 5000
+    protocol                 = "tcp"
+    source_security_group_id = module.sg_gatekeeper.security_group_id
+    description              = "Allow Gatekeeper to talk to Proxy on TCP 5000"
+  }]
+
+  egress_rules = ["all-all"]
+}
+
+module "sg_manager" {
+  source = "terraform-aws-modules/security-group/aws"
+  name   = "manager-sg"
+  vpc_id = module.vpc.vpc_id
+
+  ingress_with_source_security_group_id = [{
+    rule                     = "mysql-tcp"
+    source_security_group_id = module.sg_proxy.security_group_id
+  }]
+
+  egress_rules = ["all-all"]
+}
+
+module "sg_worker" {
+  source = "terraform-aws-modules/security-group/aws"
+  name   = "worker-sg"
+  vpc_id = module.vpc.vpc_id
+
+  ingress_with_source_security_group_id = [
+    {
+      rule                     = "mysql-tcp"
+      source_security_group_id = module.sg_proxy.security_group_id
+    },
+    {
+      rule                     = "mysql-tcp"
+      source_security_group_id = module.sg_manager.security_group_id
+    }
+  ]
+
+  egress_rules = ["all-all"]
+}
+
 data "aws_ami" "ubuntu" {
   most_recent = true
   owners      = ["amazon"]
@@ -79,6 +127,26 @@ module "gatekeeper" {
   iam_instance_profile        = "LabInstanceProfile" 
 
   user_data = templatefile("${path.module}/scripts/setup_gatekeeper.sh", {
-    proxy_private_ip = "0.0.0.0" // module.proxy.private_ip
+    proxy_private_ip = module.proxy.private_ip
   })
+}
+
+module "proxy" {
+  source  = "terraform-aws-modules/ec2-instance/aws"
+
+  name = "proxy"
+  ami  = data.aws_ami.ubuntu.id
+  instance_type = var.proxy_instance_type
+
+  subnet_id              = module.vpc.private_subnets[0]
+  vpc_security_group_ids = [module.sg_proxy.security_group_id]
+  iam_instance_profile   = "LabInstanceProfile"
+
+  user_data = templatefile("${path.module}/scripts/setup_proxy.sh", {
+    manager_ip = "0.0.0.1" //module.manager.private_ip
+    worker1_ip = "0.0.0.2" //module.worker1.private_ip
+    worker2_ip = "0.0.0.3" //module.worker2.private_ip
+  })
+
+  depends_on = [module.vpc.nat_gateway_ids]
 }
