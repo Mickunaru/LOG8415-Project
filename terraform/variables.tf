@@ -20,6 +20,12 @@ variable "mysql_proxy_password" {
   sensitive = true
 }
 
+variable "gatekeeper_api_key" {
+  default   = "gatekeeperapikey"
+  type      = string
+  sensitive = true
+}
+
 variable "manager_instance_type" {
   default = "t2.micro"
 }

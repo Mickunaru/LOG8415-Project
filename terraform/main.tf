@@ -142,6 +142,7 @@ module "gatekeeper" {
 
   user_data = templatefile("${path.module}/scripts/setup_gatekeeper.sh", {
     proxy_private_ip = module.proxy.private_ip
+    gatekeeper_api_key = var.gatekeeper_api_key
   })
 }
 

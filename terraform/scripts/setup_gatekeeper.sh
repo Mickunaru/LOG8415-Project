@@ -5,6 +5,7 @@ exec > /var/log/setup_gatekeeper.log 2>&1
 
 export PROXY_IP="${proxy_private_ip}"
 export PROXY_PORT=5000
+export GATEKEEPER_API_KEY="${gatekeeper_api_key}"
 
 apt-get update
 apt-get install -y python3 python3-pip
@@ -24,6 +25,8 @@ PROXY_IP = os.getenv("PROXY_IP")
 PROXY_PORT = os.getenv("PROXY_PORT")
 PROXY_URL = f"http://{PROXY_IP}:{PROXY_PORT}"
 
+API_KEY = os.getenv("GATEKEEPER_API_KEY")
+
 UNSAFE_COMMANDS = [
     "drop",
     "truncate",
@@ -34,12 +37,19 @@ def is_safe(query: str) -> bool:
     q = query.lower()
     return not any(cmd in q for cmd in UNSAFE_COMMANDS)
 
+def check_auth(request: Request):
+    key = request.headers.get("X-API-KEY")
+    if key != API_KEY:
+        raise HTTPException(status_code=401, detail="Unauthorized: Invalid API key")
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
 @app.post("/query")
 async def query_endpoint(request: Request):
+    check_auth(request)
+
     try:
         body = await request.json()
     except:
