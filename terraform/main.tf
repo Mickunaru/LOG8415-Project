@@ -49,10 +49,20 @@ module "sg_manager" {
   name   = "manager-sg"
   vpc_id = module.vpc.vpc_id
 
-  ingress_with_source_security_group_id = [{
-    rule                     = "mysql-tcp"
-    source_security_group_id = module.sg_proxy.security_group_id
-  }]
+  ingress_with_source_security_group_id = [
+    {
+      rule                     = "mysql-tcp"
+      source_security_group_id = module.sg_proxy.security_group_id
+    },
+    {
+      rule                     = "mysql-tcp"
+      source_security_group_id = module.sg_worker.security_group_id
+    },
+    {
+      rule                     = "all-icmp"
+      source_security_group_id = module.sg_worker.security_group_id
+    }
+  ]
 
   egress_rules = ["all-all"]
 }
@@ -69,6 +79,10 @@ module "sg_worker" {
     },
     {
       rule                     = "mysql-tcp"
+      source_security_group_id = module.sg_manager.security_group_id
+    },
+    {
+      rule                     = "all-icmp"
       source_security_group_id = module.sg_manager.security_group_id
     }
   ]
@@ -143,10 +157,71 @@ module "proxy" {
   iam_instance_profile   = "LabInstanceProfile"
 
   user_data = templatefile("${path.module}/scripts/setup_proxy.sh", {
-    manager_ip = "0.0.0.1" //module.manager.private_ip
-    worker1_ip = "0.0.0.2" //module.worker1.private_ip
-    worker2_ip = "0.0.0.3" //module.worker2.private_ip
+    manager_ip = module.manager.private_ip
+    worker1_ip = module.worker1.private_ip
+    worker2_ip = module.worker2.private_ip
   })
 
   depends_on = [module.vpc.nat_gateway_ids]
+}
+
+module "manager" {
+  source  = "terraform-aws-modules/ec2-instance/aws"
+
+  name = "manager"
+  ami  = data.aws_ami.ubuntu.id
+  instance_type = var.manager_instance_type
+
+  subnet_id              = module.vpc.private_subnets[0]
+  vpc_security_group_ids = [module.sg_manager.security_group_id]
+  iam_instance_profile   = "LabInstanceProfile"
+
+  user_data = templatefile("${path.module}/scripts/setup_manager.sh", {
+    MYSQL_ROOT_PWD = var.mysql_root_password
+    MYSQL_REPLICA_PWD = var.mysql_replica_password
+  })
+
+  depends_on = [module.vpc.nat_gateway_ids]
+}
+
+module "worker1" {
+  source = "terraform-aws-modules/ec2-instance/aws"
+
+  name = "worker1"
+  ami  = data.aws_ami.ubuntu.id
+  instance_type = var.worker_instance_type
+
+  subnet_id              = module.vpc.private_subnets[0]
+  vpc_security_group_ids = [module.sg_worker.security_group_id]
+  iam_instance_profile   = "LabInstanceProfile"
+
+  user_data = templatefile("${path.module}/scripts/setup_worker.sh", {
+    MYSQL_ROOT_PWD = var.mysql_root_password
+    MYSQL_REPLICA_PWD = var.mysql_replica_password
+    SOURCE_IP = module.manager.private_ip
+    SERVER_ID = 2
+  })
+
+  depends_on = [module.vpc.nat_gateway_ids, module.manager]
+}
+
+module "worker2" {
+  source = "terraform-aws-modules/ec2-instance/aws"
+
+  name = "worker2"
+  ami  = data.aws_ami.ubuntu.id
+  instance_type = var.worker_instance_type
+
+  subnet_id              = module.vpc.private_subnets[0]
+  vpc_security_group_ids = [module.sg_worker.security_group_id]
+  iam_instance_profile   = "LabInstanceProfile"
+
+  user_data = templatefile("${path.module}/scripts/setup_worker.sh", {
+    MYSQL_ROOT_PWD = var.mysql_root_password
+    MYSQL_REPLICA_PWD = var.mysql_replica_password
+    SOURCE_IP = module.manager.private_ip
+    SERVER_ID = 3
+  })
+
+  depends_on = [module.vpc.nat_gateway_ids, module.manager]
 }

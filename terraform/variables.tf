@@ -8,6 +8,12 @@ variable "mysql_root_password" {
   sensitive = true
 }
 
+variable "mysql_replica_password" {
+  default   = "replicapassword"
+  type      = string
+  sensitive = true
+}
+
 variable "manager_instance_type" {
   default = "t2.micro"
 }
