@@ -5,6 +5,7 @@ exec > /var/log/setup_manager.log 2>&1
 
 MYSQL_ROOT_PWD="${MYSQL_ROOT_PWD}"
 MYSQL_REPLICA_PWD="${MYSQL_REPLICA_PWD}"
+MYSQL_PROXY_PWD="${MYSQL_PROXY_PWD}"
 
 apt-get update
 apt-get install -y mysql-server wget unzip python3 python3-pip
@@ -39,7 +40,12 @@ fi
 mysql -u root -p"${MYSQL_ROOT_PWD}" <<EOF
 CREATE USER IF NOT EXISTS 'replica_user'@'%' IDENTIFIED WITH mysql_native_password BY '${MYSQL_REPLICA_PWD}';
 GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'replica_user'@'%';
+
+CREATE USER 'proxy_user'@'%' IDENTIFIED WITH mysql_native_password BY '${MYSQL_PROXY_PWD}';
+GRANT SELECT, SHOW VIEW, INSERT, UPDATE, DELETE ON sakila.* TO 'proxy_user'@'%';
+
 FLUSH PRIVILEGES;
+
 EOF
 
 echo READY > /var/run/ready

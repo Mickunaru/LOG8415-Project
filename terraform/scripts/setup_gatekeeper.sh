@@ -13,9 +13,10 @@ pip3 install fastapi uvicorn requests
 mkdir -p /opt/gatekeeper
 
 cat > /opt/gatekeeper/app.py <<'EOF'
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, HTTPException
 import requests
 import os
+import json
 
 app = FastAPI()
 
@@ -29,9 +30,9 @@ UNSAFE_COMMANDS = [
     "delete all"
 ]
 
-def is_safe(content: str) -> bool:
-    c = content.lower()
-    return not ("drop" in c or "truncate" in c or "delete all" in c)
+def is_safe(query: str) -> bool:
+    q = query.lower()
+    return not any(cmd in q for cmd in UNSAFE_COMMANDS)
 
 @app.get("/health")
 def health():
@@ -39,29 +40,38 @@ def health():
 
 @app.post("/query")
 async def query_endpoint(request: Request):
-    body_bytes = await request.body()
-    strategy = request.headers.get("x-strategy", "direct").lower()
+    try:
+        body = await request.json()
+    except:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
 
-    if not body_bytes:
-        return Response("empty body", status_code=400)
+    if "query" not in body:
+        raise HTTPException(status_code=400, detail="Missing 'query' field")
 
-    body_str = body_bytes.decode()
-    if not is_safe(body_str):
-        return Response("unsafe", status_code=400)
+    query = body["query"]
+    strategy = body["strategy"] if "strategy" in body else "direct"
+
+    if not is_safe(query):
+        raise HTTPException(status_code=400, detail="Unsafe SQL detected")
+
+    payload = {
+        "query": query,
+        "strategy": strategy
+    }
 
     try:
-        response = requests.post(
+        resp = requests.post(
             f"{PROXY_URL}/query",
-            data=body_bytes,
-            headers={"X-Strategy": strategy},
+            json=payload,
             timeout=5
         )
     except requests.RequestException as e:
-        return Response(f"proxy error: {e}", status_code=502)
+        raise HTTPException(status_code=502, detail=f"Proxy unreachable: {e}")
 
     return Response(
-        content=response.content,
-        status_code=response.status_code,
+        content=resp.content,
+        status_code=resp.status_code,
+        media_type="application/json"
     )
 EOF
 

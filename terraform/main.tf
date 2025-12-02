@@ -160,6 +160,7 @@ module "proxy" {
     manager_ip = module.manager.private_ip
     worker1_ip = module.worker1.private_ip
     worker2_ip = module.worker2.private_ip
+    MYSQL_PROXY_PWD = var.mysql_proxy_password
   })
 
   depends_on = [module.vpc.nat_gateway_ids]
@@ -179,6 +180,7 @@ module "manager" {
   user_data = templatefile("${path.module}/scripts/setup_manager.sh", {
     MYSQL_ROOT_PWD = var.mysql_root_password
     MYSQL_REPLICA_PWD = var.mysql_replica_password
+    MYSQL_PROXY_PWD = var.mysql_proxy_password
   })
 
   depends_on = [module.vpc.nat_gateway_ids]
@@ -198,6 +200,7 @@ module "worker1" {
   user_data = templatefile("${path.module}/scripts/setup_worker.sh", {
     MYSQL_ROOT_PWD = var.mysql_root_password
     MYSQL_REPLICA_PWD = var.mysql_replica_password
+    MYSQL_PROXY_PWD = var.mysql_proxy_password
     SOURCE_IP = module.manager.private_ip
     SERVER_ID = 2
   })
@@ -219,6 +222,7 @@ module "worker2" {
   user_data = templatefile("${path.module}/scripts/setup_worker.sh", {
     MYSQL_ROOT_PWD = var.mysql_root_password
     MYSQL_REPLICA_PWD = var.mysql_replica_password
+    MYSQL_PROXY_PWD = var.mysql_proxy_password
     SOURCE_IP = module.manager.private_ip
     SERVER_ID = 3
   })

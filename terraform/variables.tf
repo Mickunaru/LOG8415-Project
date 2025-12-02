@@ -14,6 +14,12 @@ variable "mysql_replica_password" {
   sensitive = true
 }
 
+variable "mysql_proxy_password" {
+  default   = "proxypassword"
+  type      = string
+  sensitive = true
+}
+
 variable "manager_instance_type" {
   default = "t2.micro"
 }
