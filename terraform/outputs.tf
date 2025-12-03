@@ -41,3 +41,8 @@ output "worker1_private_ip" {
 output "worker2_private_ip" {
   value = module.worker2.private_ip
 }
+
+output "gatekeeper_api_key" {
+  value = var.gatekeeper_api_key
+  sensitive = true
+}

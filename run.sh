@@ -26,3 +26,6 @@ echo "Configuring workers firewall"
 
 echo "Collecting Sysbench results from all instances"
 ./scripts/collect_sysbench_results.sh
+
+echo "Running load tests"
+./scripts/run_load_test.sh
