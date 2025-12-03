@@ -8,7 +8,7 @@ MYSQL_REPLICA_PWD="${MYSQL_REPLICA_PWD}"
 MYSQL_PROXY_PWD="${MYSQL_PROXY_PWD}"
 
 apt-get update
-apt-get install -y mysql-server wget unzip python3 python3-pip
+apt-get install -y mysql-server wget unzip python3 python3-pip sysbench
 
 MYSQL_CONFIG="/etc/mysql/mysql.conf.d/mysqld.cnf"
 PRIVATE_IP=$(hostname -I | awk '{print $1}')
@@ -47,5 +47,8 @@ GRANT SELECT, SHOW VIEW, INSERT, UPDATE, DELETE ON sakila.* TO 'proxy_user'@'%';
 FLUSH PRIVILEGES;
 
 EOF
+
+sysbench /usr/share/sysbench/oltp_read_only.lua --mysql-db=sakila --mysql-user="root" --mysql-password="${MYSQL_ROOT_PWD}" prepare
+sysbench /usr/share/sysbench/oltp_read_only.lua --mysql-db=sakila --mysql-user="root" --mysql-password="${MYSQL_ROOT_PWD}" run | tee /var/log/sysbench_results.log
 
 echo READY > /var/run/ready

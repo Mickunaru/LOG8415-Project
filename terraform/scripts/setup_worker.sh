@@ -15,7 +15,7 @@ if [ "$SERVER_ID" -le 1 ]; then
 fi
 
 apt-get update
-apt-get install -y mysql-server wget unzip python3 python3-pip
+apt-get install -y mysql-server wget unzip python3 python3-pip sysbench
 
 until mysqladmin ping -h "$SOURCE_IP" -u "replica_user" -p"$MYSQL_REPLICA_PWD" --silent; do
   echo "Manager MySQL not ready"
@@ -86,5 +86,8 @@ mysql -u root -p"${MYSQL_ROOT_PWD}" -e "SET GLOBAL read_only = ON;"
 echo "read_only = 1" >> /etc/mysql/mysql.conf.d/replica.cnf
 
 systemctl restart mysql
+
+sysbench /usr/share/sysbench/oltp_read_only.lua --mysql-db=sakila --mysql-user="root" --mysql-password="${MYSQL_ROOT_PWD}" prepare
+sysbench /usr/share/sysbench/oltp_read_only.lua --mysql-db=sakila --mysql-user="root" --mysql-password="${MYSQL_ROOT_PWD}" run | tee /var/log/sysbench_results.log
 
 echo READY > /var/run/ready

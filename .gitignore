@@ -46,3 +46,6 @@ terraform.rc
 # planout
 
 tfplan
+
+# Ignore logs directory
+logs/

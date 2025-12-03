@@ -23,3 +23,6 @@ echo "Configuring manager firewall"
 
 echo "Configuring workers firewall"
 ./scripts/configure_workers_firewall.sh
+
+echo "Collecting Sysbench results from all instances"
+./scripts/collect_sysbench_results.sh
