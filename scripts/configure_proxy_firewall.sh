@@ -24,4 +24,4 @@ aws ssm send-command \
 --instance-ids "$PROXY_ID" \
 --document-name "AWS-RunShellScript" \
 --parameters 'commands=["'"$FIREWALL_SCRIPT"'"]' \
---output text
+--output text >/dev/null 2>&1

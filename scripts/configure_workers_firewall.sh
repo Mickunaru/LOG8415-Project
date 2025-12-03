@@ -29,5 +29,5 @@ for ID in "${WORKER_IDS[@]}"; do
   --instance-ids "$ID" \
   --document-name "AWS-RunShellScript" \
   --parameters 'commands=["'"$FIREWALL_SCRIPT"'"]' \
-  --output text
+  --output text >/dev/null 2>&1
 done
