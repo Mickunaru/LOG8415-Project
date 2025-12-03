@@ -22,6 +22,10 @@ output "gatekeeper_public_ip" {
   value = module.gatekeeper.public_ip
 }
 
+output "gatekeeper_private_ip" {
+  value = module.gatekeeper.private_ip
+}
+
 output "proxy_private_ip" {
   value = module.proxy.private_ip
 }
@@ -37,4 +41,3 @@ output "worker1_private_ip" {
 output "worker2_private_ip" {
   value = module.worker2.private_ip
 }
-
